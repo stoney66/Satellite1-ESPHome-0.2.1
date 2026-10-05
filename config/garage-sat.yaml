@@ -1,0 +1,19 @@
+substitutions:
+  # The unique identifiers for this specific device
+  name: "garage-satellite"
+  node_name: "garage-satellite"
+  friendly_name: "Garage Satellite"
+
+  # Carry over your project defaults
+  company_name: Stoney
+  project_name: Satellite1
+
+# This pulls in all your complex logic from your local file
+<<: !include satellite1.yaml
+
+esphome:
+  name_add_mac_suffix: false
+
+api:
+  encryption:
+    key: !secret api_encryption_key

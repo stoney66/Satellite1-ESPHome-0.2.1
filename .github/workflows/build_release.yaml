@@ -1,0 +1,138 @@
+name: Build-and-Release-Satellite-Firmware
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+env:
+  DEFAULT_PYTHON: "3.9"
+permissions:
+  contents: write
+  pull-requests: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      commit_id: ${{ steps.dump.outputs.commit }}
+      previous_tag: ${{ steps.dump.outputs.previous_tag }}
+      next_tag: ${{ steps.tag.outputs.release_tag }}
+      esphome_version: ${{ steps.esphome.outputs.esphome_version }}
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          tag="${{ github.ref_name }}"
+          if [ -z "$tag" ]; then
+            echo "Release tag is empty"
+            exit 1
+          fi
+          if ! printf '%s' "$tag" | grep -Eq '^v'; then
+            echo "Release workflows must run on a tag ref that starts with v"
+            exit 1
+          fi
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Read ESPHome version from requirements.txt
+        id: esphome
+        run: |
+          version=$(grep -E '^esphome==' requirements.txt | cut -d'=' -f3)
+          if [ -z "$version" ]; then
+            echo "Failed to resolve ESPHome version from requirements.txt"
+            exit 1
+          fi
+          echo "esphome_version=$version" >> "$GITHUB_OUTPUT"
+
+      - id: dump
+        name: Set outputs
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          previous_tag=$(git tag --sort=-version:refname | grep '^v' | grep -Fxv "${{ steps.tag.outputs.release_tag }}" | sed -n '1p')
+          echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
+
+  build-firmware:
+    name: Build Firmware
+    needs:
+      - prepare
+    uses: ./.github/workflows/build.yaml
+    with:
+      files: |
+        config/satellite1.yaml
+        config/satellite1.ld2410.yaml
+        config/satellite1.ld2450.yaml
+      esphome-version: ${{ needs.prepare.outputs.esphome_version }}
+      release-version: ${{ needs.prepare.outputs.next_tag }}
+
+  build-changelog:
+    name: Build changelog
+    needs:
+      - prepare
+      - build-firmware
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+              fetch-depth: 0
+              ref: ${{ github.ref }}
+
+      - name: Ensure tag exists remotely
+        run: |
+          git fetch --tags
+          if ! git rev-parse "refs/tags/${{ needs.prepare.outputs.next_tag }}" >/dev/null 2>&1; then
+            echo "Tag ${{ needs.prepare.outputs.next_tag }} does not exist."
+            exit 1
+          fi
+
+      - name: Release Changelog Builder
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          fromTag: ${{ needs.prepare.outputs.previous_tag }}
+          toTag: ${{ needs.prepare.outputs.next_tag }}
+          configuration: .github/changelog-configuration.json
+
+  create_release:
+    name: Create Release
+    needs:
+      - build-changelog
+      - prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: files
+
+      - name: Create zip files
+        run: |
+          mkdir -p build
+          echo "Copying all files to build directory"
+          find files -name "*.bin" -exec cp {} build/ \;
+          find files -name "*.elf" -exec cp {} build/ \;
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/*.bin
+            build/*.elf
+          draft: true
+          prerelease: ${{ contains(needs.prepare.outputs.next_tag, '-beta') || contains(needs.prepare.outputs.next_tag, '-alpha') }}
+          generate_release_notes: false
+          body: |
+            ## Build Info
+            - ESPHome Version: ${{ needs.prepare.outputs.esphome_version }}
+            - Commit: `${{ needs.prepare.outputs.commit_id }}`
+
+            ${{ needs.build-changelog.outputs.changelog }}
+          tag_name: ${{ needs.prepare.outputs.next_tag }}

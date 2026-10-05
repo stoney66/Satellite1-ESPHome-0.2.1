@@ -1,0 +1,19 @@
+substitutions:
+  # The unique identifiers for this specific device
+  name: "stoneys-satellite"
+  node_name: "stoneys-satellite"
+  friendly_name: "Stoneys Satellite"
+
+  # Carry over your project defaults
+  company_name: Stoney
+  project_name: Satellite1
+
+# This pulls in all your complex logic from your local file
+<<: !include satellite1.yaml
+
+esphome:
+  name_add_mac_suffix: false
+
+api:
+  encryption:
+    key: !secret api_encryption_key
