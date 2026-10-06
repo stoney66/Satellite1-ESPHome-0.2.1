@@ -145,8 +145,8 @@ memory_flasher:
     id: xflash
     embed_flash_image:
       image_version: ${xmos_fw_version}
-      image_file: https://raw.githubusercontent.com/FutureProofHomes/Documentation/refs/heads/main/assets/firmware/xmos/${xmos_fw_version}/satellite1_firmware_fixed_delay.factory.bin
-      md5_file: https://raw.githubusercontent.com/FutureProofHomes/Documentation/refs/heads/main/assets/firmware/xmos/${xmos_fw_version}/satellite1_firmware_fixed_delay.factory.md5
+      image_file: xmos/satellite1_firmware_fixed_delay.factory.bin
+      md5_file: xmos/satellite1_firmware_fixed_delay.factory.md5
 
     on_flashing_start:
       then:

@@ -1,0 +1,117 @@
+# Four-mic diagnostics for the Satellite1 (debug package).
+#
+# Needs the XMOS build with the diagnostics servicer (v1.0.3-dev.3 or later).
+# Polls the XMOS once a second and publishes per-mic levels, mic health and
+# the detected talker direction. Remove the package when you're done testing.
+#
+# Mic order is East, West, North, South (XMOS PDM inputs 4, 5, 0, 1).
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (id(satellite1_id).state != satellite1::SAT_XMOS_CONNECTED_STATE) {
+            return;
+          }
+
+          // Resource 231: command 1 = diagnostics (48 bytes), command 0 = state (32 bytes).
+          uint8_t diag[48] = {0};
+          uint8_t st[32] = {0};
+          if (!id(satellite1_id).transfer(231, 1 | 0x80, diag, sizeof(diag))) {
+            return;
+          }
+          if (!id(satellite1_id).transfer(231, 0 | 0x80, st, sizeof(st))) {
+            return;
+          }
+
+          auto u32 = [](const uint8_t *p) -> uint32_t {
+            return (uint32_t) p[0] | ((uint32_t) p[1] << 8) | ((uint32_t) p[2] << 16) | ((uint32_t) p[3] << 24);
+          };
+          auto dbfs = [](uint32_t level) -> float {
+            if (level == 0) return -120.0f;
+            return 20.0f * log10f((float) level / 2147483648.0f);
+          };
+
+          sensor::Sensor *levels[4] = {id(mic_east_level), id(mic_west_level), id(mic_north_level), id(mic_south_level)};
+          static const char *const names[4] = {"E", "W", "N", "S"};
+          const uint8_t active_mask = diag[11];
+          std::string status;
+          for (int mic = 0; mic < 4; mic++) {
+            levels[mic]->publish_state(dbfs(u32(&diag[32 + mic * 4])));
+
+            const uint8_t health = diag[28 + mic];
+            if (!status.empty()) status += " ";
+            status += names[mic];
+            status += ":";
+            if (health == 0 && (active_mask & (1 << mic))) {
+              status += "ok";
+            } else {
+              if (health & 0x01) status += "dead";
+              if (health & 0x02) status += "noisy";
+              if (health & 0x04) status += "clipping";
+              if (health == 0) status += "off";
+            }
+          }
+          if (id(mic_status).state != status) {
+            id(mic_status).publish_state(status);
+          }
+
+          // Steering mode: bit 2 = held un-steered (speaker playing).
+          const char *mode = (diag[10] & 0x04) ? "playback hold" : "tracking";
+          if (id(beam_mode).state != mode) {
+            id(beam_mode).publish_state(mode);
+          }
+
+          // State flags: bit 0 = direction valid, bit 1 = four-mic estimate.
+          const bool valid = (st[3] & 0x01) && (st[3] & 0x02);
+          id(talker_direction_led).publish_state(valid ? (float) st[14] : NAN);
+          id(talker_direction_confidence).publish_state(valid ? (float) st[2] : 0.0f);
+
+sensor:
+  - platform: template
+    id: mic_east_level
+    name: "Mic East Level"
+    unit_of_measurement: "dBFS"
+    accuracy_decimals: 1
+    entity_category: diagnostic
+  - platform: template
+    id: mic_west_level
+    name: "Mic West Level"
+    unit_of_measurement: "dBFS"
+    accuracy_decimals: 1
+    entity_category: diagnostic
+  - platform: template
+    id: mic_north_level
+    name: "Mic North Level"
+    unit_of_measurement: "dBFS"
+    accuracy_decimals: 1
+    entity_category: diagnostic
+  - platform: template
+    id: mic_south_level
+    name: "Mic South Level"
+    unit_of_measurement: "dBFS"
+    accuracy_decimals: 1
+    entity_category: diagnostic
+  - platform: template
+    id: talker_direction_led
+    name: "Talker Direction LED"
+    icon: "mdi:compass"
+    accuracy_decimals: 0
+    entity_category: diagnostic
+  - platform: template
+    id: talker_direction_confidence
+    name: "Talker Direction Confidence"
+    accuracy_decimals: 0
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: template
+    id: mic_status
+    name: "Mic Status"
+    icon: "mdi:microphone"
+    entity_category: diagnostic
+  - platform: template
+    id: beam_mode
+    name: "Beam Mode"
+    icon: "mdi:radar"
+    entity_category: diagnostic
