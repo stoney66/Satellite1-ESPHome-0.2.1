@@ -38,8 +38,8 @@ micro_wake_word:
   models:
     - model: hey_jarvis_stoney.json
       id: hey_jarvis_stoney
-    - model: http://192.168.89.4:8123/local/hey_tom_servo.json
-      id: hey_tom_servo
+    - model: alexa
+      id: alexa
     - model: https://fph-firmware-assets.s3.us-east-1.amazonaws.com/wake-word/stop.json
       id: stop
       internal: true
@@ -252,12 +252,12 @@ select:
       # These cutoffs apply only to the specific models included in the firmware: hey_tom_servo@20241226.3, hey_jarvis_stoney@v2, hey_mycroft@v2
       lambda: |-
         if (x == "Slightly sensitive") {
-          id(hey_tom_servo).set_probability_cutoff(217);   
+          id(alexa).set_probability_cutoff(242);   
           id(hey_jarvis_stoney).set_probability_cutoff(252);   // .99
         } else if (x == "Moderately sensitive") {
-          id(hey_tom_servo).set_probability_cutoff(200);   
+          id(alexa).set_probability_cutoff(229);   
           id(hey_jarvis_stoney).set_probability_cutoff(240);   // .94
         } else if (x == "Very sensitive") {
-          id(hey_tom_servo).set_probability_cutoff(180);   
+          id(alexa).set_probability_cutoff(204);   
           id(hey_jarvis_stoney).set_probability_cutoff(227);   // .89
         }

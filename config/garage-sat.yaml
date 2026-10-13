@@ -3,6 +3,7 @@ substitutions:
   name: "garage-satellite"
   node_name: "garage-satellite"
   friendly_name: "Garage Satellite"
+  xmos_fw_version: "v1.0.3-dev.3"
 
   # Carry over your project defaults
   company_name: Stoney
