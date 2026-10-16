@@ -101,9 +101,9 @@ voice_assistant:
   media_player: external_media_player
   # micro_wake_word: mww   (OWW: wake word runs in HA)
   use_wake_word: true
-  noise_suppression_level: 0
+  noise_suppression_level: 2
   auto_gain: 0 dbfs
-  volume_multiplier: 1
+  volume_multiplier: 2
   on_client_connected:
     - lambda: id(init_in_progress) = false;
     - delay: 2s
@@ -112,6 +112,10 @@ voice_assistant:
     - script.execute: control_leds
   on_client_disconnected:
     - voice_assistant.stop:
+    - mixer_speaker.apply_ducking:
+        id: media_mixing_input
+        decibel_reduction: 0
+        duration: 1.0s
     - lambda: id(voice_assistant_phase) = ${voice_assist_not_ready_phase_id};
     - script.execute: control_leds
   on_error:
@@ -131,20 +135,23 @@ voice_assistant:
 
   # When the voice assistant starts: Play a wake up sound, duck audio.
   on_wake_word_detected:
-    - if:
-        condition:
-          switch.is_on: wake_sound
-        then:
-          - script.execute:
-              id: play_sound
-              priority: true
-              sound_file: "wake_word_triggered_sound"
     - mixer_speaker.apply_ducking:
         id: media_mixing_input
         decibel_reduction: 20
         duration: 0.0s
     - lambda: id(voice_assistant_phase) = ${voice_assist_waiting_for_command_phase_id};
     - script.execute: control_leds
+    - if:
+        condition:
+          switch.is_on: wake_sound
+        then:
+          - microphone.mute: sat1_mics
+          - script.execute:
+              id: play_sound
+              priority: true
+              sound_file: "wake_word_triggered_sound"
+          - delay: 1000ms
+          - microphone.unmute: sat1_mics
   on_stt_vad_start:
     - lambda: id(voice_assistant_phase) = ${voice_assist_listening_for_command_phase_id};
     - script.execute: control_leds

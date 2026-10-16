@@ -3,9 +3,6 @@ substitutions:
   name: "livingroom-satellite"
   node_name: "livingroom-satellite"
   friendly_name: "LivingRoom Satellite"
-  xmos_fw_version: "v1.0.3-dev.3"
-
-  # Carry over your project defaults
   company_name: Stoney
   project_name: Satellite1
 

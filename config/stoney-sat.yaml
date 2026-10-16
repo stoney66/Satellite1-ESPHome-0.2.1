@@ -3,9 +3,6 @@ substitutions:
   name: "stoneys-satellite"
   node_name: "stoneys-satellite"
   friendly_name: "Stoneys Satellite"
-  xmos_fw_version: "v1.0.3-dev.3"
-
-  # Carry over your project defaults
   company_name: Stoney
   project_name: Satellite1
 

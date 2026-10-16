@@ -14,6 +14,7 @@ substitutions:
 
   esp32_fw_version: v0.2.1-stoney
   xmos_fw_version: "v1.0.3"
+  xmos_dir: xmos-stock
 
 globals:
   # Global initialisation variable. Initialized to true and set to false once everything is connected. Only used to have a smooth "plugging" experience
@@ -145,8 +146,8 @@ memory_flasher:
     id: xflash
     embed_flash_image:
       image_version: ${xmos_fw_version}
-      image_file: xmos/satellite1_firmware_fixed_delay.factory.bin
-      md5_file: xmos/satellite1_firmware_fixed_delay.factory.md5
+      image_file: ${xmos_dir}/satellite1_firmware_fixed_delay.factory.bin
+      md5_file: ${xmos_dir}/satellite1_firmware_fixed_delay.factory.md5
 
     on_flashing_start:
       then:

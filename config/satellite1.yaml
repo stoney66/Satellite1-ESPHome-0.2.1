@@ -48,7 +48,7 @@ packages:
                 - memory_flasher.write_embedded_image:
 
   home-assistant-voice: !include satellite1.base.yaml
-  mic_diag: !include mic_diagnostics.yaml
+#  mic_diag: !include mic_diagnostics.yaml
 
 esphome:
   project:

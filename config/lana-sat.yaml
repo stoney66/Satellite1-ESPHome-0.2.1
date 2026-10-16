@@ -3,9 +3,6 @@ substitutions:
   name: "lanas-satellite"
   node_name: "lanas-satellite"
   friendly_name: "Lanas Satellite"
-  xmos_fw_version: "v1.0.3-dev.3"
-
-  # Carry over your project defaults
   company_name: Stoney
   project_name: Satellite1
 
