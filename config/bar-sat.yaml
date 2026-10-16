@@ -3,13 +3,16 @@ substitutions:
   name: "bar-satellite"
   node_name: "bar-satellite"
   friendly_name: "Bar Satellite"
-
-  # Carry over your project defaults
+#  xmos_fw_version: "v1.0.3-dev.3"
+#  xmos_dir: xmos
   company_name: Stoney
   project_name: Satellite1
 
-# This pulls in all your complex logic from your local file
 <<: !include satellite1.yaml
+# This pulls in all your complex logic from your local file
+#packages:
+#  base: !include satellite1.yaml
+#  mic_diag: !include mic_diagnostics.yaml
 
 esphome:
   name_add_mac_suffix: false

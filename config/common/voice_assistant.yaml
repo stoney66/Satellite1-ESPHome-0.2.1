@@ -50,7 +50,6 @@ micro_wake_word:
     gain_factor: 6
   stop_after_detection: false
   on_wake_word_detected:
-    # If the wake word is detected when the device is muted (Possible with the software mute switch): Do nothing
     - if:
         condition:
           switch.is_off: master_mute_switch
@@ -100,18 +99,23 @@ voice_assistant:
     channels: 0
 
   media_player: external_media_player
-  micro_wake_word: mww
-  use_wake_word: false
-  noise_suppression_level: 0
+  # micro_wake_word: mww   (OWW: wake word runs in HA)
+  use_wake_word: true
+  noise_suppression_level: 2
   auto_gain: 0 dbfs
-  volume_multiplier: 1
+  volume_multiplier: 2
   on_client_connected:
     - lambda: id(init_in_progress) = false;
-    - micro_wake_word.start:
+    - delay: 2s
+    - voice_assistant.start_continuous:
     - lambda: id(voice_assistant_phase) = ${voice_assist_idle_phase_id};
     - script.execute: control_leds
   on_client_disconnected:
     - voice_assistant.stop:
+    - mixer_speaker.apply_ducking:
+        id: media_mixing_input
+        decibel_reduction: 0
+        duration: 1.0s
     - lambda: id(voice_assistant_phase) = ${voice_assist_not_ready_phase_id};
     - script.execute: control_leds
   on_error:
@@ -130,14 +134,24 @@ voice_assistant:
         duration: 1.0s
 
   # When the voice assistant starts: Play a wake up sound, duck audio.
-  on_start:
+  on_wake_word_detected:
     - mixer_speaker.apply_ducking:
         id: media_mixing_input
-        decibel_reduction: 20   # Number of dB quieter; higher implies more quiet, 0 implies full volume
-        duration: 0.0s          # The duration of the transition (default is 0)
-  on_listening:
+        decibel_reduction: 20
+        duration: 0.0s
     - lambda: id(voice_assistant_phase) = ${voice_assist_waiting_for_command_phase_id};
     - script.execute: control_leds
+    - if:
+        condition:
+          switch.is_on: wake_sound
+        then:
+          - microphone.mute: sat1_mics
+          - script.execute:
+              id: play_sound
+              priority: true
+              sound_file: "wake_word_triggered_sound"
+          - delay: 1000ms
+          - microphone.unmute: sat1_mics
   on_stt_vad_start:
     - lambda: id(voice_assistant_phase) = ${voice_assist_listening_for_command_phase_id};
     - script.execute: control_leds
@@ -166,9 +180,7 @@ voice_assistant:
           - script.execute: activate_stop_word_once
   # When the voice assistant ends ...
   on_end:
-    - wait_until:
-        not:
-          voice_assistant.is_running:
+    - delay: 100ms
     # Stop ducking audio.
     - mixer_speaker.apply_ducking:
         id: media_mixing_input
@@ -191,6 +203,7 @@ voice_assistant:
     # Reset the voice assistant phase id and reset the LED animations.
     - lambda: id(voice_assistant_phase) = ${voice_assist_idle_phase_id};
     - script.execute: control_leds
+    - voice_assistant.start_continuous:
 
   on_timer_finished:
     - switch.turn_on: timer_ringing

@@ -3,8 +3,6 @@ substitutions:
   name: "lanas-satellite"
   node_name: "lanas-satellite"
   friendly_name: "Lanas Satellite"
-
-  # Carry over your project defaults
   company_name: Stoney
   project_name: Satellite1
 

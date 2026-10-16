@@ -3,8 +3,6 @@ substitutions:
   name: "livingroom-satellite"
   node_name: "livingroom-satellite"
   friendly_name: "LivingRoom Satellite"
-
-  # Carry over your project defaults
   company_name: Stoney
   project_name: Satellite1
 
